@@ -10,7 +10,23 @@ function internalCategories(type, data){
             </internal_category>`;
 }
 
-function rootXML(categories, questionData, commonFeedValue, quesMeta){
+
+function questionProperties(solution){
+   return `<questionProperties>
+           <property name="pageTag" type="string" value="" />
+           <property name="customType" type="string" value="" />
+           <property name="completeIncompleteGrading" type="string" value="false" />
+           <property name="instructor_info" type="string" value="" />
+           <property name="forceManualScoring" type="string" value="automatic" />
+           <property name="problemSolution" type="string" value="${solution}" />
+           <property name="audioPlayerPosition" type="string" value="above" />
+           <property name="attached_media" type="string" value="08.01b_png.ext,08.01a_png.ext,formula253.mml,formula248.mml,formula262.mml,formula263.mml,formula256.mml,formula258.mml,formula259.mml,formula251.mml,formula257.mml,formula260.mml,formula261.mml,formula252.mml,formula250.mml,formula264.mml,formula254.mml,formula255.mml,formula249.mml" />
+           <property name="useCommonFeedback" type="string" value="true" />
+           <property name="aggregatedGrading" type="string" value="false" />
+         </questionProperties>`;
+}
+
+function rootXML(categories, questionData, commonFeedValue, quesMeta, questionProperties){
 
    let questionStem = `<worksheet><stem><![CDATA[${questionData}]]</stem></worksheet>`;
    let commonFeed = `<commonFeedback><![CDATA[${commonFeedValue}]]</commonFeedback>`;
@@ -22,6 +38,7 @@ function rootXML(categories, questionData, commonFeedValue, quesMeta){
                <version>1561981908321</version>
                <title><![CDATA[Problem ${quesMeta['qtitle']}]]></title>
                <type>${quesMeta['qtype']}</type>
+               ${questionProperties}
                ${categories}
                ${questionStem}
                ${commonFeed}
@@ -70,6 +87,7 @@ function uploadXLSX(workbook, inputfiletoread){
          let categoriesXML = '';
          let questionValue = '';
          let commonFeedValue = '';
+         let questionPropertiesValue = '';
 
          let questionMeta = {};
 
@@ -114,12 +132,14 @@ function uploadXLSX(workbook, inputfiletoread){
              else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1=='Eform' && xlsxColumnValeus.col2!==undefined){
                 commonFeedValue += imageAndMmlgenerate(0, xlsxColumnValeus.col2);
              }
+             else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1=='Solution' && xlsxColumnValeus.col2!==undefined){
+                questionPropertiesValue += questionProperties(xlsxColumnValeus.col2);
+             }
             // console.log(arrEle)
          }
-
          categoriesXML = `<categories>${categoriesXML}</<categories>`;
          console.log(questionValue);
-         console.log(rootXML(categoriesXML, questionValue, commonFeedValue, questionMeta));
+         console.log(rootXML(categoriesXML, questionValue, commonFeedValue, questionMeta, questionPropertiesValue));
          return xlsxJSON;
 }
 
