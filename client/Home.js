@@ -13,7 +13,8 @@ class EZT extends Component{
                 }
               }
            )
-         //document.getElementById('show_xml').value = vkbeautify.xml(result.data);
+           console.log(result.data);
+         document.getElementById('show_xml').value = vkbeautify.xml(result.data.xml);
       }
       copyToClipboard = (e)=>{
   	  	 console.log(e);

@@ -13,12 +13,13 @@ function internalCategories(type, data){
 
 
 function generateHints(data){
-    ++counterHint;
+    counterHint++;
     return `<hint>
              <name>hint #${counterHint}</name>
              <type>html</type>
              <value><![CDATA[${data}]]></value>
             </hint>`;
+
 }
 
 function questionProperties(solution){
@@ -36,10 +37,11 @@ function questionProperties(solution){
          </questionProperties>`;
 }
 
-function rootXML(categories, questionData, commonFeedValue, quesMeta, questionProperties, questionHintValue){
-
-   let questionStem = `<worksheet><stem><![CDATA[${questionData}]]</stem></worksheet>`;
-   let commonFeed = `<commonFeedback><![CDATA[${commonFeedValue}]]</commonFeedback>`;
+function rootXML(categories, questionData, commonFeedValue, quesMeta, questionProperties, questionHintValue, randomVariables, listAnswers){
+   let commonFeed = '';
+   if(commonFeedValue!=='')
+      commonFeed = `<commonFeedback><![CDATA[${commonFeedValue}]]</commonFeedback>`;
+   let questionStem = `<worksheet><stem><![CDATA[${questionData}]]</stem>${commonFeed}</worksheet>`;
 
    return `<questionSet>
              <question>
@@ -48,11 +50,12 @@ function rootXML(categories, questionData, commonFeedValue, quesMeta, questionPr
                <version>1561981908321</version>
                <title><![CDATA[Problem ${quesMeta['qtitle']}]]></title>
                <type>${quesMeta['qtype']}</type>
-               ${questionProperties}
                ${categories}
+               ${randomVariables}
+               ${questionProperties}
                ${questionStem}
-               ${commonFeed}
                ${questionHintValue}
+               ${listAnswers}
              </<question>
            <questionSet>`;
 }
@@ -90,7 +93,45 @@ function imageAndMmlgenerate(type, data){
 // { col1: 'Section Break' }
 // { col1: 'Custom Question Type Title', col2: 'Numeric Response' }
 // { col1: 'Question Title', col2: 1.001 }
+function generateRandomVariable(variableValue, variableName='A'){
+	       let allVariables = '';
+         let varible = variableValue.split(' ');
+         let listData = '';
+         varible = varible.filter(function (el) {
+           return el != '';
+         });
+         for(let y=0; y<varible.length; y++){
+            listData += `<row><![CDATA[${varible[y]}]]></row>`;
+         }
+         return `<pooledRandom>
+                      <name>${variableName}</name>
+                      <arrayed>true</arrayed>
+                      <rows>${listData}</rows>
+                     </pooledRandom>`;
+}
 
+function generateAnswerTyps(answerValue, type){
+     console.log(type.toLowerCase()=='np')
+     if(type.toLowerCase()=='np'){
+         return `<numberAnswer>
+                   <name><![CDATA${answerValue}]></name>
+                   <weight>100</weight>
+                   <answerProperties>
+                     <property name="completeIncompleteGrading" type="string" value="false" />
+                   </answerProperties>
+                   <fieldWidth>7</fieldWidth>
+                   <correctAnswer><![CDATA[[A(3)]]]></correctAnswer>
+                   <formatString><![CDATA[#.####]]></formatString>
+                   <precisionString><![CDATA[2]]></precisionString>
+                   <units></units>
+                   <precisionType>2</precisionType>
+                   <engineeringUnits>false</engineeringUnits>
+                   <currency>false</currency>
+                 </numberAnswer>`
+     }else if(type.toLowerCase()=='mcq'){
+             return '';
+     }
+}
 
 function uploadXLSX(workbook, inputfiletoread){
          let xlsxJSON = XLSX.utils.sheet_to_json(workbook.Sheets[inputfiletoread], {defVal:""});
@@ -100,6 +141,10 @@ function uploadXLSX(workbook, inputfiletoread){
          let commonFeedValue = '';
          let questionPropertiesValue = '';
          let questionHintValue = '';
+         let randomVariables = '';
+         let listAnswers = '';
+
+             counterHint = 0;
 
          let questionMeta = {};
 
@@ -150,15 +195,25 @@ function uploadXLSX(workbook, inputfiletoread){
              else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1=='Hints' && xlsxColumnValeus.col2!==undefined){
                 questionHintValue = generateHints(xlsxColumnValeus.col2);
              }
+             else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1.match('Random Variables') && xlsxColumnValeus.col2!==undefined){
+                randomVariables += generateRandomVariable(xlsxColumnValeus.col2, xlsxColumnValeus.col3);
+             }
+             else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1.match(xlsxColumnValeus.col1) && xlsxColumnValeus.col2!==undefined && xlsxColumnValeus.col3!==undefined){
+                listAnswers += generateAnswerTyps(xlsxColumnValeus.col2, xlsxColumnValeus.col3);
+             }
             // console.log(arrEle)
          }
-         categoriesXML = `<categories>${categoriesXML}</<categories>`;
-
-         if(questionHintValue!==''){
-             questionHintValue += `<hints>${questionHintValue}</himts>`;
+         categoriesXML = `<categories>${categoriesXML}</categories>`;
+         if(randomVariables!==''){
+             randomVariables = `<randomVariables>${randomVariables}</randomVariables>`;
          }
-         console.log(rootXML(categoriesXML, questionValue, commonFeedValue, questionMeta, questionPropertiesValue, questionHintValue));
-         return xlsxJSON;
+         if(questionHintValue!==''){
+             questionHintValue = `<hints>${questionHintValue}</hints>`;
+         }
+         if(listAnswers!==''){
+            listAnswers = `<answers>${listAnswers}</answers>`
+         }
+         return rootXML(categoriesXML, questionValue, commonFeedValue, questionMeta, questionPropertiesValue, questionHintValue, randomVariables, listAnswers);
 }
 
 export default (router)=>{
@@ -171,13 +226,11 @@ export default (router)=>{
             let workbook = XLSX.readFile(`${file.path}`);
             let sheet_name_list = workbook.SheetNames;
             for(let x of sheet_name_list){
-                      xml += uploadXLSX(workbook, x);
+                  xml += uploadXLSX(workbook, x);
             }
                console.log(xml)
-               res.send({key: 'dd'});
+               res.send({xml});
             })
-
-
             .on('end', function() {
                 res.end();
             });
