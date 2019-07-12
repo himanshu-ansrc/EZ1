@@ -2,6 +2,7 @@ import formidable from 'formidable';
 import uuidv4 from 'uuid/v4';
 import XLSX from 'xlsx';
 
+let counterHint = 0;
 
 function internalCategories(type, data){
     return `<internal_category>
@@ -10,6 +11,15 @@ function internalCategories(type, data){
             </internal_category>`;
 }
 
+
+function generateHints(data){
+    ++counterHint;
+    return `<hint>
+             <name>hint #${counterHint}</name>
+             <type>html</type>
+             <value><![CDATA[${data}]]></value>
+            </hint>`;
+}
 
 function questionProperties(solution){
    return `<questionProperties>
@@ -26,7 +36,7 @@ function questionProperties(solution){
          </questionProperties>`;
 }
 
-function rootXML(categories, questionData, commonFeedValue, quesMeta, questionProperties){
+function rootXML(categories, questionData, commonFeedValue, quesMeta, questionProperties, questionHintValue){
 
    let questionStem = `<worksheet><stem><![CDATA[${questionData}]]</stem></worksheet>`;
    let commonFeed = `<commonFeedback><![CDATA[${commonFeedValue}]]</commonFeedback>`;
@@ -42,6 +52,7 @@ function rootXML(categories, questionData, commonFeedValue, quesMeta, questionPr
                ${categories}
                ${questionStem}
                ${commonFeed}
+               ${questionHintValue}
              </<question>
            <questionSet>`;
 }
@@ -88,6 +99,7 @@ function uploadXLSX(workbook, inputfiletoread){
          let questionValue = '';
          let commonFeedValue = '';
          let questionPropertiesValue = '';
+         let questionHintValue = '';
 
          let questionMeta = {};
 
@@ -133,13 +145,19 @@ function uploadXLSX(workbook, inputfiletoread){
                 commonFeedValue += imageAndMmlgenerate(0, xlsxColumnValeus.col2);
              }
              else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1=='Solution' && xlsxColumnValeus.col2!==undefined){
-                questionPropertiesValue += questionProperties(xlsxColumnValeus.col2);
+                questionPropertiesValue = questionProperties(xlsxColumnValeus.col2);
+             }
+             else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1=='Hints' && xlsxColumnValeus.col2!==undefined){
+                questionHintValue = generateHints(xlsxColumnValeus.col2);
              }
             // console.log(arrEle)
          }
          categoriesXML = `<categories>${categoriesXML}</<categories>`;
-         console.log(questionValue);
-         console.log(rootXML(categoriesXML, questionValue, commonFeedValue, questionMeta, questionPropertiesValue));
+
+         if(questionHintValue!==''){
+             questionHintValue += `<hints>${questionHintValue}</himts>`;
+         }
+         console.log(rootXML(categoriesXML, questionValue, commonFeedValue, questionMeta, questionPropertiesValue, questionHintValue));
          return xlsxJSON;
 }
 
