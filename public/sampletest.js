@@ -10,7 +10,7 @@
 { col1: 'Question' }
 { col1: 'Question' }
 { col1: 'Explanation', col2: 'Text1' }
-{ col1: 'Explanation', col2: 'formula4.mml' }
+{ col1: 'Eform', col2: 'formula4.mml' }
 { col1: 'Explanation', col2: 'Text2' }
 { col1: 'Eimage', col2: '2055_png.ext' }
 { col1: 'Explanation', col2: 'Text3' }
