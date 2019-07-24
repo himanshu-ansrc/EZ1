@@ -3,6 +3,7 @@ import uuidv4 from 'uuid/v4';
 import XLSX from 'xlsx';
 
 let counterHint = 0;
+let reverse = false;
 
 function internalCategories(type, data){
     return `<internal_category>
@@ -31,7 +32,6 @@ function questionProperties(solution){
            <property name="forceManualScoring" type="string" value="automatic" />
            <property name="problemSolution" type="string" value="${solution}" />
            <property name="audioPlayerPosition" type="string" value="above" />
-           <property name="attached_media" type="string" value="08.01b_png.ext,08.01a_png.ext,formula253.mml,formula248.mml,formula262.mml,formula263.mml,formula256.mml,formula258.mml,formula259.mml,formula251.mml,formula257.mml,formula260.mml,formula261.mml,formula252.mml,formula250.mml,formula264.mml,formula254.mml,formula255.mml,formula249.mml" />
            <property name="useCommonFeedback" type="string" value="true" />
            <property name="aggregatedGrading" type="string" value="false" />
          </questionProperties>`;
@@ -40,11 +40,10 @@ function questionProperties(solution){
 function rootXML(categories, questionData, commonFeedValue, quesMeta, questionProperties, questionHintValue, randomVariables, listAnswers){
    let commonFeed = '';
    if(commonFeedValue!=='')
-      commonFeed = `<commonFeedback><![CDATA[${commonFeedValue}]]</commonFeedback>`;
-   let questionStem = `<worksheet><stem><![CDATA[${questionData}]]</stem>${commonFeed}</worksheet>`;
+      commonFeed = `<commonFeedback><![CDATA[${commonFeedValue}]]></commonFeedback>`;
+   let questionStem = `<worksheet><stem><![CDATA[${questionData}]]></stem>${commonFeed}</worksheet>`;
 
-   return `<questionSet>
-             <question>
+   return `<questionSet><question>
                <format>1</format>
                <ezid>13570164500387354</ezid>
                <version>1561981908321</version>
@@ -56,26 +55,126 @@ function rootXML(categories, questionData, commonFeedValue, quesMeta, questionPr
                ${questionStem}
                ${questionHintValue}
                ${listAnswers}
-             </<question>
-           <questionSet>`;
+             </question></questionSet>`;
 }
 
+function imageAndMmlCover(data){
+         console.log(data)
+         let k = data.split('.');
+         let a = k.pop();
+         let b = k.join('');
+         if(a=='mml'){
+            return "%" + "media:" + b + "."+ a+"%"  ;
+            //return `<p>&nbsp;</p><p>${result}</p><p>&nbsp;</p>`;
+         }else
+            return "%" + "media:" + b + "_"+ a + ".ext"+"%";
+}
+
+
+function splitImageAndMml(str){
+       str = str.split('>>');
+       //console.log(str);
+       let response = '';
+       if(str.length>1){
+         let media = imageAndMmlCover(str[0]);
+             str[0] = imageAndMmlCover(str[0]);
+       }
+
+       //check for new line
+       let splitter = reverse ? '<<i:' : '<<n:';
+       for(let x=0; x<str.length; x++){
+           let ele = str[x].split(splitter);
+           if(ele.length>1){
+              ele[1] = reverse ? imageAndMmlCover(ele[1]) : `<p>&nbsp;</p><p>${imageAndMmlCover(ele[1])}</p><p>&nbsp;</p>`;
+              str[x] = ele[0]+ele[1];
+           }
+       }
+       for(let y of str){
+           response += y;
+       }
+       return response;
+}
 
 
 function imageAndMmlgenerate(type, data){
        let result = '';
        if(type==1 || type==0){
-          let k = data.split('.');
-          let a = k.pop();
-          let b = k.join('');
-          if(a=='mml'){
-              result = "%" + "media:" + b + "_"+ a+"%";
-              return `<p>&nbsp;</p><p>${result}</p><p>&nbsp;</p>`;
-          }else
-              result = "%" + "media:" + b + "_"+ a + ".ext"+"%";
-       }else
-           result = data;
-       return `<p>${result}</p>`;
+          result =  type==0 ? `<p>&nbsp;</p><p>${imageAndMmlCover(data)}</p><p>&nbsp;</p>` : `<p>${imageAndMmlCover(data)}</p>`;
+       }else{
+           let resultString = data.split('<<i:');
+           if(resultString.length==1){
+              resultString = data.split('<<n:');
+              reverse = true;
+           }else{
+              reverse = false;
+           }
+           let response = '';
+               if(resultString.length>1){
+                   resultString = resultString.map((x)=>{
+                         if(x!==''){
+                            return !reverse ? splitImageAndMml(x): `<p>&nbsp;</p><p>${splitImageAndMml(x)}</p><p>&nbsp;</p>`;
+                         }else{
+                            return x;
+                         }
+                   });
+                   console.log(resultString)
+                   for(let k=0; k<resultString.length; k++){
+                       response += resultString[k];
+                   }
+               }else{
+                   response = data;
+               }
+
+              // let newlineString = response.split('<<n:');
+              //     console.log(response)
+              //        if(newlineString.length>1){
+              //           newlineString = newlineString.map((x)=>{
+              //                  if(x!==''){
+              //                     return `<p>&nbsp;</p><p>${splitImageAndMml(x)}</p><p>&nbsp;</p>`;
+              //                  }else{
+              //                     return `<p>${x}</p>`;
+              //                  }
+              //            });
+              //            for(let k=0; k<newlineString.length; k++){
+              //                response += newlineString[k];
+              //            }
+              //        }else{
+              //            response = data;
+              //        }
+           //     newlineString = newlineString.map((x)=>{
+           //           if(x!==''){
+           //              return `<p>&nbsp;</p><p>${splitImageAndMml(x)}</p><p>&nbsp;</p>`;
+           //           }else{
+           //              return `<p>${x}</p>`;
+           //           }
+           //     });
+           //     let finalResponse = '';
+           //     for(let k=0; k<newlineString.length; k++){
+           //         finalResponse += newlineString[k];
+           //     }
+          //
+          //
+          //  data = data.replace(/<<i:.+>>/, function (match) {
+          //             match = match.replace('<<i:', '');
+          //             match = match.replace('>>', '');
+          //           //  resultString = resultString.match(/<<i:.+>>/)
+          //
+          //           //  console.log(resultString);
+          //             return imageAndMmlCover(match);
+          //    }
+          //  );
+          //  data = data.replace(/<<n:.+>>/ig, function (match) {
+          //              match = match.replace('<<n:', '');
+          //              match = match.replace('>>', '');
+          //              if(match.match('.mml'))
+          //                 return `<p>&nbsp;</p><p>${imageAndMmlCover(match)}</p><p>&nbsp;</p>`;
+          //              else
+          //                 return `<p>${imageAndMmlCover(match)}</p>`;
+          //     }
+          // );
+          result = `<p>${response}</p>`;
+       }
+       return result;
 }
 // { col1: 'Category tags' }
 // { col1: 'Bloom\'s: Object' }
@@ -95,26 +194,25 @@ function imageAndMmlgenerate(type, data){
 // { col1: 'Question Title', col2: 1.001 }
 function generateRandomVariable(variableValue, variableName='A'){
 	       let allVariables = '';
-         let varible = variableValue.split(' ');
+         let varible = variableValue.split('\n');
          let listData = '';
          varible = varible.filter(function (el) {
            return el != '';
          });
          for(let y=0; y<varible.length; y++){
-            listData += `<row><![CDATA[${varible[y]}]]></row>`;
+            console.log(varible[y].length)
+            varible[y] = varible[y].replace('\r', '');
+            listData += "<row><![CDATA["+varible[y]+"]]></row>";
          }
-         return `<pooledRandom>
-                      <name>${variableName}</name>
-                      <arrayed>true</arrayed>
+         return `<pooledRandom><name>${variableName}</name><arrayed>true</arrayed>
                       <rows>${listData}</rows>
                      </pooledRandom>`;
 }
 
-function generateAnswerTyps(answerValue, type){
-     console.log(type.toLowerCase()=='np')
+function generateAnswerTyps(optionValue, type, answerValue){
      if(type.toLowerCase()=='np'){
          return `<numberAnswer>
-                   <name><![CDATA${answerValue}]></name>
+                   <name><![CDATA${optionValue}]></name>
                    <weight>100</weight>
                    <answerProperties>
                      <property name="completeIncompleteGrading" type="string" value="false" />
@@ -129,7 +227,37 @@ function generateAnswerTyps(answerValue, type){
                    <currency>false</currency>
                  </numberAnswer>`
      }else if(type.toLowerCase()=='mcq'){
-             return '';
+           if(answerValue){
+              answerValue = answerValue.split(',');
+              answerValue = answerValue.map((e)=>e.trim());
+           }else{
+              answerValue = ['1'];
+           }
+           let options = '';
+           console.log(answerValue)
+           let multipleCount = optionValue.split(',');
+           for(let y=1; y<=multipleCount.length; y++){
+               let indexedEle = y.toString();
+               let k =  answerValue.indexOf(indexedEle)>=0 ? 'true': 'false';
+                   options +=	`<choice>
+                                <distractor><![CDATA[${multipleCount[y-1]}]]></distractor>
+                                <correct>${k}</correct>
+                               </choice>`;
+           }
+           return `<multipleChoiceAnswer>
+                     <name><![CDATA[C]]></name>
+                     <weight>100</weight>
+                     <answerProperties>
+                        <property name="presentation" type="string" value="dropDown" />
+                        <property name="completeIncompleteGrading" type="string" value="false" />
+                        <property name="width" type="string" value="" />
+                        <property name="prompt" type="string" value="" />
+                        <property name="scramble" type="string" value="true" />
+                     </answerProperties>
+                     <choices>
+                       ${options}
+                     </choices>
+                  </multipleChoiceAnswer>`;
      }
 }
 
@@ -198,8 +326,8 @@ function uploadXLSX(workbook, inputfiletoread){
              else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1.match('Random Variables') && xlsxColumnValeus.col2!==undefined){
                 randomVariables += generateRandomVariable(xlsxColumnValeus.col2, xlsxColumnValeus.col3);
              }
-             else if(xlsxColumnValeus.col1 && xlsxColumnValeus.col1.match(xlsxColumnValeus.col1) && xlsxColumnValeus.col2!==undefined && xlsxColumnValeus.col3!==undefined){
-                listAnswers += generateAnswerTyps(xlsxColumnValeus.col2, xlsxColumnValeus.col3);
+             else if(xlsxColumnValeus.col1 && (/<answer.*\d>$/ig).test(xlsxColumnValeus.col1) && xlsxColumnValeus.col2!==undefined && xlsxColumnValeus.col3!==undefined){
+                listAnswers += generateAnswerTyps(xlsxColumnValeus.col2, xlsxColumnValeus.col3, xlsxColumnValeus.col4);
              }
             // console.log(arrEle)
          }
@@ -221,14 +349,12 @@ export default (router)=>{
         new formidable.IncomingForm().parse(req)
             .on('file', function(name, file) {
                 const tempPptFileName = uuidv4();
-                console.log(tempPptFileName)
                 let xml = '';
             let workbook = XLSX.readFile(`${file.path}`);
             let sheet_name_list = workbook.SheetNames;
             for(let x of sheet_name_list){
                   xml += uploadXLSX(workbook, x);
             }
-               console.log(xml)
                res.send({xml});
             })
             .on('end', function() {

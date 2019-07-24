@@ -14,7 +14,7 @@ class EZT extends Component{
               }
            )
            console.log(result.data);
-         document.getElementById('show_xml').value = vkbeautify.xml(result.data.xml);
+         document.getElementById('show_xml').value = result.data.xml;
       }
       copyToClipboard = (e)=>{
   	  	 console.log(e);
